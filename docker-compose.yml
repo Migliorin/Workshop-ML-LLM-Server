@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:16
+    container_name: admin_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - admin_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    container_name: admin_api
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.fastapi
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASSWORD}
+    networks:
+      - admin_net
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  mcp:
+    container_name: admin_mcp
+    restart: unless-stopped
+    stdin_open: true   # mantém STDIN aberto
+    tty: true
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    env_file:
+      - .env
+    environment:
+      API_BASE_URL: http://api:8000
+    networks:
+      - admin_net
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${MCP_PORT:-8001}:8001"
+
+  # Opcional (se quiser somente FastAPI e MCP expostos, remova este serviço ou remova ports)
+  adminer:
+    image: adminer:4
+    container_name: adminer_ui
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - admin_net
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+
+volumes:
+  pgdata:
+
+networks:
+  admin_net:
+    driver: bridge
