@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16
-    container_name: admin_db
+    container_name: db_postgres
     restart: unless-stopped
     env_file:
       - .env
@@ -20,8 +20,10 @@ services:
       retries: 20
 
   api:
-    container_name: admin_api
+    container_name: api_server
     restart: unless-stopped
+    stdin_open: true
+    tty: true
     build:
       context: database-server/
     env_file:
@@ -41,9 +43,9 @@ services:
       - "${API_PORT:-8000}:8000"
 
   mcp:
-    container_name: admin_mcp
+    container_name: mcp_server
     restart: unless-stopped
-    stdin_open: true   # mantém STDIN aberto
+    stdin_open: true
     tty: true
     build:
       context: mcp-server/
