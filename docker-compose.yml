@@ -23,8 +23,7 @@ services:
     container_name: admin_api
     restart: unless-stopped
     build:
-      context: .
-      dockerfile: docker/Dockerfile.fastapi
+      context: database-server/
     env_file:
       - .env
     environment:
@@ -47,8 +46,7 @@ services:
     stdin_open: true   # mantém STDIN aberto
     tty: true
     build:
-      context: .
-      dockerfile: docker/Dockerfile.mcp
+      context: mcp-server/
     env_file:
       - .env
     environment:
@@ -61,7 +59,6 @@ services:
     ports:
       - "${MCP_PORT:-8001}:8001"
 
-  # Opcional (se quiser somente FastAPI e MCP expostos, remova este serviço ou remova ports)
   adminer:
     image: adminer:4
     container_name: adminer_ui

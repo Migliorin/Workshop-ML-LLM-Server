@@ -1,51 +1,14 @@
 import os
 import httpx
-from datetime import date, datetime
+from utils import _normalize_hired_on
 from typing import Optional, List, Dict, Any
 from fastmcp import FastMCP
 
-def _normalize_hired_on(value: str) -> str:
-    """
-    Normaliza hired_on para ISO.
-    - Se vier "YYYY-MM-DD" -> retorna "YYYY-MM-DD"
-    - Se vier datetime ISO (com T) -> retorna só a data "YYYY-MM-DD"
-    - Se vier vazio/ruim -> retorna o valor original (pra não estourar)
-    """
-    if not isinstance(value, str):
-        return value  # type: ignore[return-value]
 
-    s = value.strip()
-    if not s:
-        return value
-
-    try:
-        if "T" in s:
-            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
-            return dt.date().isoformat()
-        # valida e normaliza YYYY-MM-DD
-        return date.fromisoformat(s).isoformat()
-    except Exception:
-        return value
-
-
-# =========================
-# Config
-# =========================
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv("API_BASE_URL")
 
 mcp = FastMCP("admin-setor-mcp")
 
-
-# =========================
-# HTTP Client Helper
-# =========================
-# async def api_request(method: str, path: str, json: Optional[dict] = None, params: Optional[dict] = None):
-#     url = f"{API_BASE_URL}{path}"
-#     async with httpx.AsyncClient(timeout=20.0) as client:
-#         response = await client.request(method, url, json=json, params=params)
-#         print
-#         response.raise_for_status()
-#         return response.json()
 async def api_request(method: str, path: str, **kwargs):
     url = f"{API_BASE_URL}{path}"
     async with httpx.AsyncClient(timeout=20.0) as client:
@@ -59,11 +22,6 @@ async def api_request(method: str, path: str, **kwargs):
             return {"ok": False, "status": r.status_code, "body": body}
 
         return r.json()
-
-
-# =========================
-# TOOLS
-# =========================
 
 @mcp.tool()
 async def list_departments(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
@@ -176,12 +134,7 @@ async def create_payment(
         "reference": reference
     })
 
-
-# =========================
-# Run Server
-# =========================
 if __name__ == "__main__":
-    # Servidor remoto via Streamable HTTP (recomendado)
     mcp.run(
         transport="http",
         host="0.0.0.0",
